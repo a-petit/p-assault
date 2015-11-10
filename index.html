@@ -18,18 +18,104 @@
 		/////////////////////////////////////////////////////////
 		/////////////////////////////////////////////////////////
 
-		var Particle = function() {
-    		// Run the Mesh constructor with the given arguments
-    		THREE.Geometry.apply(this, arguments);
+		// MyParticle
 
-    		function testMethod() {
-    			this.rotation.x += .05;
-    		}
+		MyParticle = function() {
+			this.pos = new Three.vector3();
+			this.vel = new Three.vector3();
+			this.acc = new Three.vector3();
+
+			this.max_vel = 40.0;
+			//this.weight  = 1.0;
+
+			this.acc_decay = 0.0;
+			this.vel_decay = 1.0;
 		};
-		// Make Particle have the same methods as Geometry
-		Particle.prototype = Object.create(THREE.Geometry.prototype);
-		// Make sure the right constructor gets called
-		Particle.prototype.constructor = Particle;
+
+		MyParticle.prototype = {
+
+			constructor: MyParticle,
+
+			update: function ( time ) 
+			{
+				this.vel.add(acc);
+				this.vel.clampScalar(0.0, max_vel);
+				
+				this.pos.add(vel);
+
+				this.acc.multiplyScalar(acc_decay);
+				this.vel.multiplyScalar(vel_decay);
+			},
+
+			addForce: function( force )
+			{
+				this.acc.add(force);
+			},
+
+			setActive: function( value )
+			{
+				this.active = false;
+				this.pos.z = 500000; // exceed the draw distance
+			}
+
+		};
+
+		// MyParticleSystem
+
+		MyParticleSystem = function(g, x, y, z, max) {
+
+    		this.G = g;
+    		this.center = new Three.vector3(x, y, z);
+    		this.particlesCount = max;
+
+    		this.pGeometry = new THREE.Geometry();
+			this.pMaterial = new THREE.ParticleBasicMaterial({
+					color: 0xFFFFFF,
+					size: 20,
+					map: THREE.ImageUtils.loadTexture("images/particle.png"),
+					blending: THREE.AdditiveBlending,
+					transparent: true
+				});
+		};
+
+		MyParticleSystem.prototype = {
+
+			constructor: MyParticleSystem,
+
+			initialize: function()
+			{
+				// now create the individual particles
+				for(var p = 0; p < this.particlesCount; p++) {
+				
+					// create a particle with random
+					// position values, -250 -> 250
+					var pX = Math.random() * 500 - 250,
+						pY = Math.random() * 500 - 250,
+						pZ = Math.random() * 500 - 250,
+					    particle = new THREE.Vertex(
+							new THREE.Vector3(pX, pY, pZ)
+						);
+					// create a velocity vector
+					particle.velocity = new THREE.Vector3(
+						0,				// x
+						-Math.random(),	// y
+						0);				// z
+
+					// add it to the geometry
+					pGeometry.vertices.push(particle);
+				}
+				
+				// create the particle system
+				particleSystem = new THREE.ParticleSystem(pGeometry, pMaterial);
+				particleSystem.sortParticles = true;
+				
+				// auto-add to the scene
+				scene.add(particleSystem);
+			}
+
+
+		}
+
 		/*
 		Then to instantiate it:
 
@@ -115,7 +201,7 @@
 		function initProgram()
 		{
 
-			particles = new Particle();//THREE.Geometry();
+			particles = new THREE.Geometry();
 			pMaterial = new THREE.ParticleBasicMaterial({
 					color: 0xFFFFFF,
 					size: 20,/*
@@ -125,6 +211,8 @@
 					blending: THREE.AdditiveBlending,
 					transparent: true
 				});
+
+
 			
 			// now create the individual particles
 			for(var p = 0; p < particleCount; p++) {
