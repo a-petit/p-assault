@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Planetary Assault WebGL</title>
+	</head>
+	<body>
+		
+		<div id="container" width="100%" height="100%" margin="0px" padding="0px"></div>
+		
+	</body>
+	
+	<script src="js/Three.js"></script>
+	<script src="js/three.min.js"></script>
+
+	<script type="text/javascript">
+
+		/////////////////////////////////////////////////////////
+		/////////////////////////////////////////////////////////
+
+		var Particle = function() {
+    		// Run the Mesh constructor with the given arguments
+    		THREE.Geometry.apply(this, arguments);
+
+    		function testMethod() {
+    			this.rotation.x += .05;
+    		}
+		};
+		// Make Particle have the same methods as Geometry
+		Particle.prototype = Object.create(THREE.Geometry.prototype);
+		// Make sure the right constructor gets called
+		Particle.prototype.constructor = Particle;
+		/*
+		Then to instantiate it:
+
+		var testGeo = new THREE.CubeGeometry(20, 20, 20);
+		var testMat = new Three.MeshNormalMaterial();
+		var thing = new MyObject3D(testGeo, testMat);*/
+
+
+
+
+
+		// - RENDERING ATTRIBUTES
+
+		var scene;
+		var camera;
+		var renderer;
+
+		// width and height of the scene :
+		var WIDTH = window.innerWidth;
+		var HEIGHT = window.innerHeight;
+
+		// camera attributes
+		var VIEW_ANGLE = 45;
+		var ASPECT = WIDTH / HEIGHT;
+		var NEAR = 0.1;
+		var FAR = 10000;
+
+		// - PROGRAM ATTRIBUTES
+
+		var particleCount = 1800;
+		var particles;
+		var pMaterial;
+
+		var particleSystem;
+
+		///////////////////////////////////////////////////
+		///////////////////////////////////////////////////
+
+		launch();
+
+
+		function launch() 
+		{
+			initRendering();
+			initProgram();
+			update();
+		}
+
+		function initRendering()
+		{
+			// Create the scene
+			scene = new THREE.Scene();
+			
+			// Create a WebGL renderer and add it to the DOM.
+			renderer = new THREE.WebGLRenderer();
+			renderer.setSize(WIDTH, HEIGHT);
+			renderer.setClearColorHex(0x333F47, 1);
+			document.getElementById("container").appendChild(renderer.domElement);
+
+			// Create a camera, zoom it out from the model a bit, and add it to the scene.
+			camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+			camera.position.z = 300;
+			scene.add(camera);
+
+
+			// Create an event listener that resizes the renderer with the browser window.
+		    window.addEventListener('resize', function() {
+		    	WIDTH = window.innerWidth,
+		        HEIGHT = window.innerHeight;
+		        renderer.setSize(WIDTH, HEIGHT);
+		        camera.aspect = WIDTH / HEIGHT;
+		        camera.updateProjectionMatrix();
+		    });
+
+			/*
+			// Create a light, set its position, and add it to the scene.
+			var light = new THREE.PointLight(0xffffff);
+				light.position.set(-100,200,100);
+				scene.add(light);
+			}*/
+		}
+
+		function initProgram()
+		{
+
+			particles = new Particle();//THREE.Geometry();
+			pMaterial = new THREE.ParticleBasicMaterial({
+					color: 0xFFFFFF,
+					size: 20,/*
+					map: THREE.ImageUtils.loadTexture(
+						"images/particle.png"
+					),*/
+					blending: THREE.AdditiveBlending,
+					transparent: true
+				});
+			
+			// now create the individual particles
+			for(var p = 0; p < particleCount; p++) {
+			
+				// create a particle with random
+				// position values, -250 -> 250
+				var pX = Math.random() * 500 - 250,
+					pY = Math.random() * 500 - 250,
+					pZ = Math.random() * 500 - 250,
+				    particle = new THREE.Vertex(
+						new THREE.Vector3(pX, pY, pZ)
+					);
+				// create a velocity vector
+				particle.velocity = new THREE.Vector3(
+					0,				// x
+					-Math.random(),	// y
+					0);				// z
+
+				// add it to the geometry
+				particles.vertices.push(particle);
+			}
+			
+			// create the particle system
+			particleSystem = new THREE.ParticleSystem(particles, pMaterial);
+			particleSystem.sortParticles = true;
+			
+			// add it to the scene
+			scene.add(particleSystem);
+		}
+
+		// Renders the scene and updates the render as needed.
+    	function update() {
+	      	// Update
+	      	//particleSystem.rotation.x += .2;
+
+			// Render the scene.
+			renderer.render(scene, camera);
+
+    		// set up the next call
+			requestAnimationFrame(update);
+		}
+
+
+		// Smart animation system
+		window.requestAnimFrame = (function(){
+		    return  window.requestAnimationFrame       ||
+		            window.webkitRequestAnimationFrame ||
+		            window.mozRequestAnimationFrame    ||
+		            window.oRequestAnimationFrame      || 
+		            window.msRequestAnimationFrame     || 
+		            function(callback){
+		              window.setTimeout(callback, 1000 / 60);
+		            };
+		})();
+
+	</script>
+</html>
