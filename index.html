@@ -26,6 +26,7 @@
 			this.acc = new THREE.Vector3();
 
 			this.velMax = 40.0;
+			this.velLow = 5.0;
 			this.accDecay = 0.0;
 			this.velDecay = 1.0;
 
@@ -102,10 +103,10 @@
 				// create the individual particles
 				var particle;
     			var pGeometry = new THREE.Geometry();
-				var pMaterial = new THREE.ParticleBasicMaterial({
+				var pMaterial = new THREE.PointsMaterial({
 					color: 0xFFFFFF,
-					size: 20,
-					map: THREE.ImageUtils.loadTexture("images/particle.png"),
+					size: 4,
+					//map: THREE.ImageUtils.loadTexture("images/particle.png"),
 					blending: THREE.AdditiveBlending,
 					transparent: true
 				});
@@ -120,7 +121,7 @@
 				}
 				
 				// create the particle system
-				this.pSystem = new THREE.ParticleSystem(pGeometry, pMaterial);
+				this.pSystem = new THREE.Points(pGeometry, pMaterial);
 				this.pSystem.sortParticles = true;
 				
 				// auto-add to the scene
@@ -147,13 +148,14 @@
 			{
 				var f = p.pos.clone();
 				f.sub(this.center);
-				/*if (f.length() < 30) {
+				if (f.length() < 50) {
+					var r = f.length() / 50;
 					f.normalize();
-					f.multiplyScalar(-this.G * f.length() / 30);
-				} else {*/
+					f.multiplyScalar(-this.G*r);
+				} else {
 					f.normalize();
 					f.multiplyScalar(-this.G);
-				//}
+				}
 				p.addForce(f);
 			},
 
@@ -187,7 +189,6 @@
 					f.multiplyScalar(v);
 
 					p.addForce(f);
-					//p.velocity.add(value);
 				}
 			},
 
@@ -233,6 +234,7 @@
 		var HEIGHT = window.innerHeight;
 
 		// camera attributes
+		var CAMERA_INITIAL_POS_Z = 1000;
 		var VIEW_ANGLE = 45;
 		var ASPECT = WIDTH / HEIGHT;
 		var NEAR = 0.1;
@@ -242,11 +244,11 @@
 
 		var particleSystem;
 
-		var PARTICLES_PER_WAVE = 200;
+		var PARTICLES_PER_WAVE = 500;
 		var PARTICLES_RINGS_PER_WAVES = 10; // FOR 3D DROP, must divide PARTICLES_PER_WAVE
-		var PARTICLE_MAX_COUNT = 800;//50000;
+		var PARTICLE_MAX_COUNT = 20000;
 
-		var INITIAL_ACC = 20;
+		var INITIAL_ACC = 40;
 
 
 		init();
@@ -265,7 +267,7 @@
 
 			// Create a camera, zoom it out from the model a bit, and add it to the scene.
 			camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-			camera.position.z = 1000;
+			camera.position.z = CAMERA_DEFAULT_POS_Z;
 			scene.add(camera);
 
 
@@ -325,16 +327,15 @@
 		function emmitParticles2D(x, y) 
 		{   	
 		 	var p, i, t, a;
-		 	var px, py, pz, ax, ay, az;
+		 	var px, py, pz, ax, ay;
 		 	for(i = 0; i < PARTICLES_PER_WAVE; i++) {
 		 		if (p = particleSystem.getParticle()) {
 
 			 		t  = THREE.Math.mapLinear(i, 0, PARTICLES_PER_WAVE, 0, Math.PI*2);			 		
 			 		ax = INITIAL_ACC*Math.cos(t);
 			 		ay = INITIAL_ACC*Math.sin(t);
-			 		az = 0;
 			 		// console.warn('emmit: '+ax+', '+ay+', '+az+', t:'+t);
-			 		p.set(x, y, z, ax, ay, az);
+			 		p.set(x, y, 0, ax, ay, 0);
 			 	}
 		 	}
 		}
@@ -350,14 +351,13 @@
 		    console.warn(e.keyCode+', '+e.keyChar);
 
 		    if (e.keyCode == '65') { // a
-		        
+		        emmitParticles2D(0,0);
 		    }
 		    else if (e.keyCode == '90') { // z
 				emmitParticles(
 					Math.random()*WIDTH-WIDTH/2, 
 					Math.random()*HEIGHT-HEIGHT/2,
-					Math.random()*WIDTH-WIDTH/2
-					);
+					Math.random()*WIDTH-WIDTH/2);
 		    }
 		    else if (e.keyCode == '69') { // e
 				emmitParticles(0, 0, 0);
