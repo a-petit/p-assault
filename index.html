@@ -267,7 +267,7 @@
 
 			// Create a camera, zoom it out from the model a bit, and add it to the scene.
 			camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-			camera.position.z = CAMERA_DEFAULT_POS_Z;
+			camera.position.z = CAMERA_INITIAL_POS_Z;
 			scene.add(camera);
 
 
@@ -282,6 +282,8 @@
 
 			particleSystem = new MyParticleSystem(PARTICLE_MAX_COUNT);
 			particleSystem.initialize();
+
+			emmitParticles2D(0,0);
 		}
 
 		// Renders the scene and updates the render as needed.
