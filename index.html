@@ -10,26 +10,26 @@
 		
 	</body>
 	
-	<script src="js/Three.js"></script>
 	<script src="js/three.min.js"></script>
 
 	<script type="text/javascript">
 
-		/////////////////////////////////////////////////////////
-		/////////////////////////////////////////////////////////
-
-		// MyParticle
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//
+		// - MyParticle Class
 
 		MyParticle = function() {
-			this.pos = new Three.vector3();
-			this.vel = new Three.vector3();
-			this.acc = new Three.vector3();
+		//	console.warn( 'MyParticle::ctor' );
+			this.pos = new THREE.Vector3(Math.random() * 500 - 250, Math.random() * 500 - 250, Math.random() * 500 - 250);
+			this.vel = new THREE.Vector3();
+			this.acc = new THREE.Vector3();
 
-			this.max_vel = 40.0;
-			//this.weight  = 1.0;
+			this.velMax = 40.0;
+			this.accDecay = 0.0;
+			this.velDecay = 1.0;
 
-			this.acc_decay = 0.0;
-			this.vel_decay = 1.0;
+			this.active = true;
 		};
 
 		MyParticle.prototype = {
@@ -38,44 +38,47 @@
 
 			update: function ( time ) 
 			{
-				this.vel.add(acc);
-				this.vel.clampScalar(0.0, max_vel);
+				this.vel.add(this.acc);
+				if (this.vel.length() > this.velMax) {
+					this.vel.setLength( this.velMax);
+				}
 				
-				this.pos.add(vel);
+				this.pos.add(this.vel);
 
-				this.acc.multiplyScalar(acc_decay);
-				this.vel.multiplyScalar(vel_decay);
+				this.acc.multiplyScalar( this.accDecay );
+				this.vel.multiplyScalar( this.velDecay );
+
 			},
 
 			addForce: function( force )
 			{
-				this.acc.add(force);
+			//	console.warn ('MyParticle::addForce:: '+force.x+', '+force.y);
+				this.acc.add( force );
 			},
 
 			setActive: function( value )
 			{
-				this.active = false;
+				this.active = value;
 				this.pos.z = 500000; // exceed the draw distance
 			}
 
 		};
 
-		// MyParticleSystem
 
-		MyParticleSystem = function(g, x, y, z, max) {
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//
+		// - MyParticleSystem Class
 
-    		this.G = g;
-    		this.center = new Three.vector3(x, y, z);
-    		this.particlesCount = max;
+		MyParticleSystem = function() {
+		//	console.warn( 'MyParticleSystem::ctor' );
 
-    		this.pGeometry = new THREE.Geometry();
-			this.pMaterial = new THREE.ParticleBasicMaterial({
-					color: 0xFFFFFF,
-					size: 20,
-					map: THREE.ImageUtils.loadTexture("images/particle.png"),
-					blending: THREE.AdditiveBlending,
-					transparent: true
-				});
+    		this.G = 0.98;
+    		this.center = new THREE.Vector3(0.0, 0.0, 0.0);
+    		this.particleCount = 200;
+
+			this.pSystem;
+			this.particles = [];
 		};
 
 		MyParticleSystem.prototype = {
@@ -85,46 +88,100 @@
 			initialize: function()
 			{
 				// now create the individual particles
-				for(var p = 0; p < this.particlesCount; p++) {
-				
-					// create a particle with random
-					// position values, -250 -> 250
-					var pX = Math.random() * 500 - 250,
-						pY = Math.random() * 500 - 250,
-						pZ = Math.random() * 500 - 250,
-					    particle = new THREE.Vertex(
-							new THREE.Vector3(pX, pY, pZ)
-						);
-					// create a velocity vector
-					particle.velocity = new THREE.Vector3(
-						0,				// x
-						-Math.random(),	// y
-						0);				// z
+				var particle;
+    			var pGeometry = new THREE.Geometry();
+				var pMaterial = new THREE.ParticleBasicMaterial({
+					color: 0xFFFFFF,
+					size: 20,
+					map: THREE.ImageUtils.loadTexture("images/particle.png"),
+					blending: THREE.AdditiveBlending,
+					transparent: true
+				});
 
+				for(var i = 0; i < this.particleCount; i++) {
+				
+					// create a particle
+					particle = new MyParticle();
 					// add it to the geometry
-					pGeometry.vertices.push(particle);
+					pGeometry.vertices.push(particle.pos);
+					this.particles.push(particle);
 				}
 				
 				// create the particle system
-				particleSystem = new THREE.ParticleSystem(pGeometry, pMaterial);
-				particleSystem.sortParticles = true;
+				this.pSystem = new THREE.ParticleSystem(pGeometry, pMaterial);
+				this.pSystem.sortParticles = true;
 				
 				// auto-add to the scene
-				scene.add(particleSystem);
+				scene.add(this.pSystem);
+			},
+
+			update: function()
+			{
+				var p, i;
+				for(i = 0; i < this.particleCount; i++) {
+					p = this.particles[i];
+					if (p.active) {
+						this.gravity(p);
+						this.air(p);
+					}
+					p.update();
+				}
+
+				// flag to the particle system that we've changed its vertices.
+				this.pSystem.geometry.verticesNeedUpdate = true;
+			},
+
+			gravity: function( p )
+			{
+				var f = p.pos.clone();
+				f.sub(this.center);
+				f.normalize();
+				f.multiplyScalar(-this.G);
+				p.addForce(f);
+			},
+
+			air: function( p )
+			{
+				var f = p.vel.clone(); 
+				f.multiplyScalar(-.02);
+				p.addForce(f);
+			},
+
+			impulse: function( value )
+			{
+				var p, i;
+				for(i = 0; i < this.particleCount; i++) {
+					p = this.particles[i];
+					p.velocity.multiplyScalar(value);
+				}
+			},
+
+			turn: function( value )
+			{
+				var p, i, f;
+				var axis = new THREE.Vector3(1, 0, 0);
+
+				for(i = 0; i < this.particleCount; i++) {
+					p = this.particles[i];
+					
+					f = p.pos.clone();
+					f.sub(center);
+					f.applyAxisAngle(axis, Math.PI / 2);
+					f.multiplyScalar(value);
+
+					p.addForce(f);
+					//p.velocity.add(value);
+				}
 			}
 
 
 		}
 
-		/*
-		Then to instantiate it:
 
-		var testGeo = new THREE.CubeGeometry(20, 20, 20);
-		var testMat = new Three.MeshNormalMaterial();
-		var thing = new MyObject3D(testGeo, testMat);*/
-
-
-
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//
+		// - Main Program
 
 
 		// - RENDERING ATTRIBUTES
@@ -145,26 +202,16 @@
 
 		// - PROGRAM ATTRIBUTES
 
-		var particleCount = 1800;
-		var particles;
-		var pMaterial;
-
 		var particleSystem;
 
-		///////////////////////////////////////////////////
-		///////////////////////////////////////////////////
-
-		launch();
 
 
-		function launch() 
-		{
-			initRendering();
-			initProgram();
-			update();
-		}
 
-		function initRendering()
+
+		init();
+		update();
+
+		function init()
 		{
 			// Create the scene
 			scene = new THREE.Scene();
@@ -172,7 +219,7 @@
 			// Create a WebGL renderer and add it to the DOM.
 			renderer = new THREE.WebGLRenderer();
 			renderer.setSize(WIDTH, HEIGHT);
-			renderer.setClearColorHex(0x333F47, 1);
+			renderer.setClearColor(0x333F47, 1);
 			document.getElementById("container").appendChild(renderer.domElement);
 
 			// Create a camera, zoom it out from the model a bit, and add it to the scene.
@@ -196,63 +243,54 @@
 				light.position.set(-100,200,100);
 				scene.add(light);
 			}*/
-		}
 
-		function initProgram()
-		{
-
-			particles = new THREE.Geometry();
-			pMaterial = new THREE.ParticleBasicMaterial({
-					color: 0xFFFFFF,
-					size: 20,/*
-					map: THREE.ImageUtils.loadTexture(
-						"images/particle.png"
-					),*/
-					blending: THREE.AdditiveBlending,
-					transparent: true
-				});
-
-
-			
-			// now create the individual particles
-			for(var p = 0; p < particleCount; p++) {
-			
-				// create a particle with random
-				// position values, -250 -> 250
-				var pX = Math.random() * 500 - 250,
-					pY = Math.random() * 500 - 250,
-					pZ = Math.random() * 500 - 250,
-				    particle = new THREE.Vertex(
-						new THREE.Vector3(pX, pY, pZ)
-					);
-				// create a velocity vector
-				particle.velocity = new THREE.Vector3(
-					0,				// x
-					-Math.random(),	// y
-					0);				// z
-
-				// add it to the geometry
-				particles.vertices.push(particle);
-			}
-			
-			// create the particle system
-			particleSystem = new THREE.ParticleSystem(particles, pMaterial);
-			particleSystem.sortParticles = true;
-			
-			// add it to the scene
-			scene.add(particleSystem);
+			particleSystem = new MyParticleSystem();
+			particleSystem.initialize();
 		}
 
 		// Renders the scene and updates the render as needed.
     	function update() {
+    		//console.warn( 'update' );
+
 	      	// Update
-	      	//particleSystem.rotation.x += .2;
+	      	particleSystem.update();
 
 			// Render the scene.
 			renderer.render(scene, camera);
 
     		// set up the next call
 			requestAnimationFrame(update);
+		}
+
+
+
+
+		document.onkeydown = keyDown;
+		function keyDown(e) {
+
+		    e = e || window.event;
+
+		    console.warn(e.keyCode+', '+e.keyChar);
+
+		    if (e.keyCode == '65') { // a
+		        
+		    }
+		    else if (e.keyCode == '90') { // z
+		        
+		    }
+		    else if (e.keyCode == '69') { // e
+				
+		    }
+		    else if (e.keyCode == '73') { // i
+				
+		    }
+		    else if (e.keyCode == '79') { // o
+				
+		    }
+		    else if (e.keyCode == '80') { // p
+				
+		    }
+
 		}
 
 
