@@ -248,7 +248,7 @@
 		var PARTICLES_RINGS_PER_WAVES = 10; // FOR 3D DROP, must divide PARTICLES_PER_WAVE
 		var PARTICLE_MAX_COUNT = 20000;
 
-		var INITIAL_ACC = 40;
+		var INITIAL_ACC = 60;//40;
 
 
 		init();
@@ -283,7 +283,9 @@
 			particleSystem = new MyParticleSystem(PARTICLE_MAX_COUNT);
 			particleSystem.initialize();
 
-			emmitParticles2D(0,0);
+			dropParticles2D(0,0);
+
+			document.onkeydown = keyDown;
 		}
 
 		// Renders the scene and updates the render as needed.
@@ -301,7 +303,7 @@
 		}
 
 
-		function emmitParticles(x, y, z) {  
+		function dropParticles(x, y, z) {  
 		 	
 		 	if (z === undefined) {
 		 		z = 0;
@@ -326,7 +328,7 @@
 		 	}
 		}
 
-		function emmitParticles2D(x, y) 
+		function dropParticles2D(x, y) 
 		{   	
 		 	var p, i, t, a;
 		 	var px, py, pz, ax, ay;
@@ -342,10 +344,11 @@
 		 	}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//
+		// - Controls
 
-
-
-		document.onkeydown = keyDown;
 		function keyDown(e) {
 
 		    e = e || window.event;
@@ -353,16 +356,16 @@
 		    console.warn(e.keyCode+', '+e.keyChar);
 
 		    if (e.keyCode == '65') { // a
-		        emmitParticles2D(0,0);
+		        dropParticles2D(0,0);
 		    }
 		    else if (e.keyCode == '90') { // z
-				emmitParticles(
+				dropParticles(
 					Math.random()*WIDTH-WIDTH/2, 
 					Math.random()*HEIGHT-HEIGHT/2,
 					Math.random()*WIDTH-WIDTH/2);
 		    }
 		    else if (e.keyCode == '69') { // e
-				emmitParticles(0, 0, 0);
+				dropParticles(0, 0, 0);
 		    }
 		    else if (e.keyCode == '82') { // r
 		    	particleSystem.freeParticles();
@@ -381,6 +384,10 @@
 		    }
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//
+		// - Utils
 
 		// Smart animation system
 		window.requestAnimFrame = (function(){
