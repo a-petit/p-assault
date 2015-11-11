@@ -5,14 +5,25 @@
 		<title>Planetary Assault WebGL</title>
 	</head>
 	<body>
-		
-		<div id="container" width="100%" height="100%" margin="0px" padding="0px"></div>
+		<div id="container"></div>
 		
 	</body>
 	
-	<script src="js/three.min.js"></script>
+	<style type="text/css">
+		html, body {
+			width: 100%;
+			margin: 0;
+			height: 100%;
+			overflow: hidden;
+		}	
+	</style>
 
+	<script src="js/three.min.js"></script>
 	<script type="text/javascript">
+
+		// Keyboard controls : a, z, e, r, u, i, o, p
+		// pattern exemple 1 : alternate quickly and repeatedly 'a' and 'i'
+		// pattern exemple 2 : alternate quickly and repeatedly 'z' and 'p'
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -230,29 +241,31 @@
 		var renderer;
 
 		// width and height of the scene :
-		var WIDTH = window.innerWidth;
+		var WIDTH  = window.innerWidth;
 		var HEIGHT = window.innerHeight;
 
 		// camera attributes
-		var CAMERA_INITIAL_POS_Z = 1000;
-		var VIEW_ANGLE = 45;
-		var ASPECT = WIDTH / HEIGHT;
-		var NEAR = 0.1;
-		var FAR = 10000;
+		var CAMERA_INITIAL_POS_Z 	= 1000;
+		var VIEW_ANGLE 				= 45;
+		var ASPECT 					= WIDTH / HEIGHT;
+		var NEAR 					= 0.1;
+		var FAR 					= 10000;
 
 		// - PROGRAM ATTRIBUTES
 
 		var particleSystem;
 
-		var PARTICLES_PER_WAVE = 500;
-		var PARTICLES_RINGS_PER_WAVES = 10; // FOR 3D DROP, must divide PARTICLES_PER_WAVE
-		var PARTICLE_MAX_COUNT = 20000;
+		var PARTICLES_PER_WAVE 			= 500;
+		var PARTICLES_RINGS_PER_WAVES 	= 10; // FOR 3D DROP, must divide PARTICLES_PER_WAVE
+		var PARTICLE_MAX_COUNT 			= 20000;
 
-		var INITIAL_ACC = 60;//40;
+		var INITIAL_ACC 				= 60;//40;
+
+		var launchPattern 				= [90,80,90,80,90,80,90,80,90,80,90,80,90,80,90,80,90,80]; 
 
 
 		init();
-		update();
+		animate();
 
 		function init()
 		{
@@ -283,13 +296,18 @@
 			particleSystem = new MyParticleSystem(PARTICLE_MAX_COUNT);
 			particleSystem.initialize();
 
-			dropParticles2D(0,0);
+			// run the launch pattern
+			var patternLength = launchPattern.length;
+			for(i = 0; i < patternLength; ++i) {
+				setTimeout(function(){ processKeyCode(launchPattern.pop()); }, i * 250);
+			}
 
+			// listen keyboard
 			document.onkeydown = keyDown;
 		}
 
 		// Renders the scene and updates the render as needed.
-    	function update() {
+    	function animate() {
     		//console.warn( 'update' );
 
 	      	// Update
@@ -299,7 +317,7 @@
 			renderer.render(scene, camera);
 
     		// set up the next call
-			requestAnimationFrame(update);
+			requestAnimationFrame(animate);
 		}
 
 
@@ -349,38 +367,42 @@
 		//
 		// - Controls
 
-		function keyDown(e) {
-
+		function keyDown(e) 
+		{
 		    e = e || window.event;
+			processKeyCode(e.keyCode);
+		}
 
-		    console.warn(e.keyCode+', '+e.keyChar);
+		function processKeyCode(keyCode)
+		{
+		//	console.warn("processKeyCode: "+keyCode);
 
-		    if (e.keyCode == '65') { // a
+		    if (keyCode == 65) { // a
 		        dropParticles2D(0,0);
 		    }
-		    else if (e.keyCode == '90') { // z
+		    else if (keyCode == 90) { // z
+				dropParticles(0, 0, 0);
+		    }
+		    else if (keyCode == 69) { // e
 				dropParticles(
 					Math.random()*WIDTH-WIDTH/2, 
 					Math.random()*HEIGHT-HEIGHT/2,
 					Math.random()*WIDTH-WIDTH/2);
 		    }
-		    else if (e.keyCode == '69') { // e
-				dropParticles(0, 0, 0);
-		    }
-		    else if (e.keyCode == '82') { // r
+		    else if (keyCode == 82) { // r
 		    	particleSystem.freeParticles();
 		        dropParticles2D(0,0);
 		    }
-		    else if (e.keyCode == '85') { // u
+		    else if (keyCode == 85) { // u
 				particleSystem.impulse(2);
 		    }
-		    else if (e.keyCode == '73') { // i
+		    else if (keyCode == 73) { // i
 				particleSystem.turn(10, 1, 0, 0);
 		    }
-		    else if (e.keyCode == '79') { // o
+		    else if (keyCode == 79) { // o
 				particleSystem.turn(10, 0, 1, 0);
 		    }
-		    else if (e.keyCode == '80') { // p
+		    else if (keyCode == 80) { // p
 				particleSystem.turn(10, 0, 0, 1);
 		    }
 		}
