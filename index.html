@@ -21,7 +21,7 @@
 
 		MyParticle = function() {
 		//	console.warn( 'MyParticle::ctor' );
-			this.pos = new THREE.Vector3(Math.random() * 500 - 250, Math.random() * 500 - 250, Math.random() * 500 - 250);
+			this.pos = new THREE.Vector3();//Math.random() * 500 - 250, Math.random() * 500 - 250, Math.random() * 500 - 250);
 			this.vel = new THREE.Vector3();
 			this.acc = new THREE.Vector3();
 
@@ -29,12 +29,21 @@
 			this.accDecay = 0.0;
 			this.velDecay = 1.0;
 
-			this.active = true;
+			this.active;// = true;
 		};
 
 		MyParticle.prototype = {
 
 			constructor: MyParticle,
+
+			set: function ( px, py, pz, ax, ay, az)
+			{
+			//	console.warn( 'initialize particle: '+px+', '+py+', '+pz+', '+ax+', '+ay+', '+az);
+				this.pos.set(px, py, pz);
+				this.acc.set(ax, ay, az);
+				this.vel.set(0, 0, 0);
+				this.active = true;
+			},
 
 			update: function ( time ) 
 			{
@@ -56,9 +65,9 @@
 				this.acc.add( force );
 			},
 
-			setActive: function( value )
+			free: function( value )
 			{
-				this.active = value;
+				this.active = false;
 				this.pos.z = 500000; // exceed the draw distance
 			}
 
@@ -70,15 +79,18 @@
 		//
 		// - MyParticleSystem Class
 
-		MyParticleSystem = function() {
+		MyParticleSystem = function(size) {
 		//	console.warn( 'MyParticleSystem::ctor' );
+			if (size === undefined) {
+				size = 500;
+			}
 
     		this.G = 0.98;
     		this.center = new THREE.Vector3(0.0, 0.0, 0.0);
-    		this.particleCount = 200;
+    		this.particleCount = size;
 
-			this.pSystem;
-			this.particles = [];
+			this.pSystem;  			// Three.js Points
+			this.particles = [];	// Particle datas
 		};
 
 		MyParticleSystem.prototype = {
@@ -87,7 +99,7 @@
 
 			initialize: function()
 			{
-				// now create the individual particles
+				// create the individual particles
 				var particle;
     			var pGeometry = new THREE.Geometry();
 				var pMaterial = new THREE.ParticleBasicMaterial({
@@ -126,7 +138,7 @@
 					}
 					p.update();
 				}
-
+				// console.warn('update: '+p.vel.length());
 				// flag to the particle system that we've changed its vertices.
 				this.pSystem.geometry.verticesNeedUpdate = true;
 			},
@@ -135,8 +147,13 @@
 			{
 				var f = p.pos.clone();
 				f.sub(this.center);
-				f.normalize();
-				f.multiplyScalar(-this.G);
+				/*if (f.length() < 30) {
+					f.normalize();
+					f.multiplyScalar(-this.G * f.length() / 30);
+				} else {*/
+					f.normalize();
+					f.multiplyScalar(-this.G);
+				//}
 				p.addForce(f);
 			},
 
@@ -152,25 +169,46 @@
 				var p, i;
 				for(i = 0; i < this.particleCount; i++) {
 					p = this.particles[i];
-					p.velocity.multiplyScalar(value);
+					p.vel.multiplyScalar(value);
 				}
 			},
 
-			turn: function( value )
+			turn: function( v, x, y, z )
 			{
 				var p, i, f;
-				var axis = new THREE.Vector3(1, 0, 0);
+				var axis = new THREE.Vector3(x, y, z);
 
 				for(i = 0; i < this.particleCount; i++) {
 					p = this.particles[i];
 					
 					f = p.pos.clone();
-					f.sub(center);
+					f.sub(this.center);
 					f.applyAxisAngle(axis, Math.PI / 2);
-					f.multiplyScalar(value);
+					f.multiplyScalar(v);
 
 					p.addForce(f);
 					//p.velocity.add(value);
+				}
+			},
+
+			getParticle: function()
+			{
+				var p, i;
+				for(i = 0; i < this.particleCount; i++) {
+					p = this.particles[i];
+					if (!p.active) {
+						return p
+					}
+				}
+				return null;
+			},
+
+			freeParticles: function()
+			{
+				var p, i;
+				for(i = 0; i < this.particleCount; i++) {
+					p = this.particles[i];
+					p.free();
 				}
 			}
 
@@ -204,8 +242,11 @@
 
 		var particleSystem;
 
+		var PARTICLES_PER_WAVE = 200;
+		var PARTICLES_RINGS_PER_WAVES = 10; // FOR 3D DROP, must divide PARTICLES_PER_WAVE
+		var PARTICLE_MAX_COUNT = 800;//50000;
 
-
+		var INITIAL_ACC = 20;
 
 
 		init();
@@ -219,12 +260,12 @@
 			// Create a WebGL renderer and add it to the DOM.
 			renderer = new THREE.WebGLRenderer();
 			renderer.setSize(WIDTH, HEIGHT);
-			renderer.setClearColor(0x333F47, 1);
+			renderer.setClearColor(0x111D25, 1);
 			document.getElementById("container").appendChild(renderer.domElement);
 
 			// Create a camera, zoom it out from the model a bit, and add it to the scene.
 			camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-			camera.position.z = 300;
+			camera.position.z = 1000;
 			scene.add(camera);
 
 
@@ -237,14 +278,7 @@
 		        camera.updateProjectionMatrix();
 		    });
 
-			/*
-			// Create a light, set its position, and add it to the scene.
-			var light = new THREE.PointLight(0xffffff);
-				light.position.set(-100,200,100);
-				scene.add(light);
-			}*/
-
-			particleSystem = new MyParticleSystem();
+			particleSystem = new MyParticleSystem(PARTICLE_MAX_COUNT);
 			particleSystem.initialize();
 		}
 
@@ -263,6 +297,49 @@
 		}
 
 
+		function emmitParticles(x, y, z) {  
+		 	
+		 	if (z === undefined) {
+		 		z = 0;
+			}
+
+		 	var p, i, j, t, a;
+		 	var px, py, pz, ax, ay, az;
+		 	var particlesPerRings = PARTICLES_PER_WAVE / PARTICLES_RINGS_PER_WAVES;
+
+		 	for(i = 0; i < PARTICLES_RINGS_PER_WAVES; i++) {
+		 		a = THREE.Math.mapLinear(i, 0, PARTICLES_RINGS_PER_WAVES, 0, Math.PI);
+		 		for(j = 0; j < particlesPerRings; j++) {
+		 			if (p = particleSystem.getParticle()) {
+
+			 			t = THREE.Math.mapLinear(j, 0, particlesPerRings, 0, Math.PI*2);
+			 			ax = INITIAL_ACC * Math.sin(t) * Math.cos(a);
+				 		ay = INITIAL_ACC * Math.sin(t) * Math.sin(a);
+				 		az = INITIAL_ACC * Math.cos(t);
+				 		p.set(x, y, z, ax, ay, az);
+				 	}
+		 		}
+		 	}
+		}
+
+		function emmitParticles2D(x, y) 
+		{   	
+		 	var p, i, t, a;
+		 	var px, py, pz, ax, ay, az;
+		 	for(i = 0; i < PARTICLES_PER_WAVE; i++) {
+		 		if (p = particleSystem.getParticle()) {
+
+			 		t  = THREE.Math.mapLinear(i, 0, PARTICLES_PER_WAVE, 0, Math.PI*2);			 		
+			 		ax = INITIAL_ACC*Math.cos(t);
+			 		ay = INITIAL_ACC*Math.sin(t);
+			 		az = 0;
+			 		// console.warn('emmit: '+ax+', '+ay+', '+az+', t:'+t);
+			 		p.set(x, y, z, ax, ay, az);
+			 	}
+		 	}
+		}
+
+
 
 
 		document.onkeydown = keyDown;
@@ -276,21 +353,30 @@
 		        
 		    }
 		    else if (e.keyCode == '90') { // z
-		        
+				emmitParticles(
+					Math.random()*WIDTH-WIDTH/2, 
+					Math.random()*HEIGHT-HEIGHT/2,
+					Math.random()*WIDTH-WIDTH/2
+					);
 		    }
 		    else if (e.keyCode == '69') { // e
-				
+				emmitParticles(0, 0, 0);
+		    }
+		    else if (e.keyCode == '82') { // r
+		    	particleSystem.freeParticles();
+		    }
+		    else if (e.keyCode == '85') { // u
+				particleSystem.impulse(2);
 		    }
 		    else if (e.keyCode == '73') { // i
-				
+				particleSystem.turn(10, 1, 0, 0);
 		    }
 		    else if (e.keyCode == '79') { // o
-				
+				particleSystem.turn(10, 0, 1, 0);
 		    }
 		    else if (e.keyCode == '80') { // p
-				
+				particleSystem.turn(10, 0, 0, 1);
 		    }
-
 		}
 
 
