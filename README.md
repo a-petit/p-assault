@@ -1,7 +1,3 @@
 # p-assault
 
-Three.js particle experiment
-
-# demo
-
-http://codepen.io/kahaus/details/NGEWXK
+Three.js particle experiment, see the demo at http://codepen.io/kahaus/details/NGEWXK !
